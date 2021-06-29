@@ -1,5 +1,5 @@
 # Brakelite
-A Lightweight, minimal, and effective notification system to remind you to stretch
+A lightweight, minimal, and effective notification system to remind you to stretch
 and take quick breaks throughout the day.
 
 ## How it Works
@@ -13,4 +13,5 @@ tray drop-down menu.
 ### Future Plans
 - App/notification icon
 - Pre-set notification pause durations to choose from
+- Automatic build/release system for executables (Github)
 - Customizable (optional) durations/messages/values via a config file
