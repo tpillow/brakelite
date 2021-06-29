@@ -1,4 +1,4 @@
-module github.com/codenmore/brakelite
+module github.com/tpillow/brakelite
 
 go 1.16
 
