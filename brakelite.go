@@ -9,9 +9,10 @@ import (
 	"github.com/getlantern/systray"
 )
 
-const TimeScale = time.Minute
+const TimeScale = time.Second
 
-var breakDurs = [...]int{5, 10, 15, 20}
+var breakDurs = [...]int{5, 10, 15, 20, 25, 30}
+var pauseDurs = [...]int{30, 60, 90, 120}
 var breakStartDurIdx = 1
 var breakMsgs = [...]string{
 	"Take a quick break, sit up straight.",
@@ -24,14 +25,18 @@ type DurOpt struct {
 }
 
 var durOptAggCh chan *DurOpt
+var pauseOptAggCh chan *DurOpt
 var notifTimerStopCh chan struct{}
 
 var durOpts []DurOpt
+var pauseOpts []DurOpt
 var menuStatus *systray.MenuItem
 var timeUntilNextNotif int
+var timeUntilUnpause int = 0
 
 func main() {
 	durOptAggCh = make(chan *DurOpt)
+	pauseOptAggCh = make(chan *DurOpt)
 	notifTimerStopCh = make(chan struct{})
 	systray.Run(onReady, onExit)
 }
@@ -41,7 +46,7 @@ func genNotifMsg() string {
 }
 
 func showNotif() {
-	if err := beeep.Notify("Brakelite! Stop!", genNotifMsg(), "icon.ico"); err != nil {
+	if err := beeep.Notify("Brakelite!", genNotifMsg(), "icon.ico"); err != nil {
 		panic(err)
 	}
 }
@@ -59,19 +64,27 @@ func resetNotifTimer(dopt *DurOpt, isFirst bool) {
 		}
 	}
 
-	timeUntilNextNotif = dopt.dur
-	menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
+	if timeUntilUnpause <= 0 {
+		timeUntilNextNotif = dopt.dur
+		menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
+	}
 
 	go func() {
 		for {
 			select {
 			case <-time.After(TimeScale):
-				timeUntilNextNotif--
-				if timeUntilNextNotif <= 0 {
-					showNotif()
-					timeUntilNextNotif = dopt.dur
+				if timeUntilUnpause > 0 {
+					timeUntilUnpause--
+					menuStatus.SetTitle(fmt.Sprintf("Paused: %d mins", timeUntilUnpause))
 				}
-				menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
+				if timeUntilUnpause <= 0 {
+					timeUntilNextNotif--
+					if timeUntilNextNotif <= 0 {
+						showNotif()
+						timeUntilNextNotif = dopt.dur
+					}
+					menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
+				}
 			case <-notifTimerStopCh:
 				return
 			}
@@ -95,6 +108,22 @@ func addDurOpt(root *systray.MenuItem, dur int) {
 	}()
 }
 
+func addPauseOpt(root *systray.MenuItem, dur int) {
+	menuText := fmt.Sprintf("%d Mins", dur)
+	menu := root.AddSubMenuItem(menuText, menuText)
+	dopt := DurOpt{menu, dur}
+	pauseOpts = append(pauseOpts, dopt)
+
+	go func() {
+		for {
+			select {
+			case <-menu.ClickedCh:
+				pauseOptAggCh <- &dopt
+			}
+		}
+	}()
+}
+
 func onReady() {
 	systray.SetTemplateIcon(iconData, iconData)
 	systray.SetTitle("Brakelite")
@@ -109,6 +138,12 @@ func onReady() {
 	}
 	resetNotifTimer(&durOpts[breakStartDurIdx], true)
 
+	menuPauseDurs := systray.AddMenuItem("Pause", "Pause brakelite for some time")
+	menuCancelPause := menuPauseDurs.AddSubMenuItem("Cancel Pause", "Cancel any current pause")
+	for _, dur := range pauseDurs {
+		addPauseOpt(menuPauseDurs, dur)
+	}
+
 	menuQuit := systray.AddMenuItem("Quit", "Quit Brakelite")
 
 	go func() {
@@ -116,6 +151,12 @@ func onReady() {
 			select {
 			case dopt := <-durOptAggCh:
 				resetNotifTimer(dopt, false)
+			case dopt := <-pauseOptAggCh:
+				timeUntilUnpause = dopt.dur
+				timeUntilNextNotif = 0
+				menuStatus.SetTitle(fmt.Sprintf("Paused: %d mins", timeUntilUnpause))
+			case <-menuCancelPause.ClickedCh:
+				timeUntilUnpause = 0
 			case <-menuQuit.ClickedCh:
 				systray.Quit()
 				return
@@ -127,6 +168,7 @@ func onReady() {
 func onExit() {
 	notifTimerStopCh <- struct{}{}
 	close(durOptAggCh)
+	close(pauseOptAggCh)
 	close(notifTimerStopCh)
 }
 
