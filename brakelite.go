@@ -27,6 +27,8 @@ var durOptAggCh chan *DurOpt
 var notifTimerStopCh chan struct{}
 
 var durOpts []DurOpt
+var menuStatus *systray.MenuItem
+var timeUntilNextNotif int
 
 func main() {
 	durOptAggCh = make(chan *DurOpt)
@@ -57,11 +59,19 @@ func resetNotifTimer(dopt *DurOpt, isFirst bool) {
 		}
 	}
 
+	timeUntilNextNotif = dopt.dur
+	menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
+
 	go func() {
 		for {
 			select {
-			case <-time.After(time.Duration(dopt.dur) * TimeScale):
-				showNotif()
+			case <-time.After(TimeScale):
+				timeUntilNextNotif--
+				if timeUntilNextNotif <= 0 {
+					showNotif()
+					timeUntilNextNotif = dopt.dur
+				}
+				menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
 			case <-notifTimerStopCh:
 				return
 			}
@@ -89,6 +99,9 @@ func onReady() {
 	systray.SetTemplateIcon(iconData, iconData)
 	systray.SetTitle("Brakelite")
 	systray.SetTooltip("Lightweight. Minimal. Effective.")
+
+	menuStatus = systray.AddMenuItem("N/A", "Status text")
+	menuStatus.Disable()
 
 	menuDurs := systray.AddMenuItem("Durations", "Notification duration settings")
 	for _, dur := range breakDurs {

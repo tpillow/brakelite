@@ -8,10 +8,9 @@ tray drop-down menu.
 
 ### Features
 - Pre-set notification durations to choose from
+- Next notification status indicator
 - Hard-coded, randomized break messages
 
 ### Future Plans
-- App/notification icon
 - Pre-set notification pause durations to choose from
 - Automatic build/release system for executables (Github)
-- Customizable (optional) durations/messages/values via a config file
