@@ -13,4 +13,10 @@ tray drop-down menu.
 - Hard-coded, randomized break messages
 
 ### Future Plans
+- Unit tests (will need to mock notifier and add time scale)
 - Automatic build/release system for executables (Github)
+
+### Building Executables
+Brakelite can be built for any Go OS/ARCH, for example:
+- env GOOS=windows GOARCH=amd64 go build build/win/amd64/brakelite.exe
+- env GOOS=linux GOARCH=amd64 go build build/linux/amd64/brakelite
