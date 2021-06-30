@@ -10,6 +10,7 @@ import (
 )
 
 const TimeScale = time.Second
+const PauseUntilCancelled = -2
 
 var breakDurs = [...]int{5, 10, 15, 20, 25, 30}
 var pauseDurs = [...]int{30, 60, 90, 120}
@@ -64,7 +65,7 @@ func resetNotifTimer(dopt *DurOpt, isFirst bool) {
 		}
 	}
 
-	if timeUntilUnpause <= 0 {
+	if timeUntilUnpause <= 0 && timeUntilUnpause != PauseUntilCancelled {
 		timeUntilNextNotif = dopt.dur
 		menuStatus.SetTitle(fmt.Sprintf("Next: %d mins", timeUntilNextNotif))
 	}
@@ -73,11 +74,11 @@ func resetNotifTimer(dopt *DurOpt, isFirst bool) {
 		for {
 			select {
 			case <-time.After(TimeScale):
-				if timeUntilUnpause > 0 {
+				if timeUntilUnpause > 0 && timeUntilUnpause != PauseUntilCancelled {
 					timeUntilUnpause--
 					menuStatus.SetTitle(fmt.Sprintf("Paused: %d mins", timeUntilUnpause))
 				}
-				if timeUntilUnpause <= 0 {
+				if timeUntilUnpause <= 0 && timeUntilUnpause != PauseUntilCancelled {
 					timeUntilNextNotif--
 					if timeUntilNextNotif <= 0 {
 						showNotif()
@@ -143,6 +144,7 @@ func onReady() {
 	for _, dur := range pauseDurs {
 		addPauseOpt(menuPauseDurs, dur)
 	}
+	menuPauseForever := menuPauseDurs.AddSubMenuItem("Until Cancelled", "Pause until cancelled")
 
 	menuQuit := systray.AddMenuItem("Quit", "Quit Brakelite")
 
@@ -157,6 +159,10 @@ func onReady() {
 				menuStatus.SetTitle(fmt.Sprintf("Paused: %d mins", timeUntilUnpause))
 			case <-menuCancelPause.ClickedCh:
 				timeUntilUnpause = 0
+			case <-menuPauseForever.ClickedCh:
+				timeUntilNextNotif = 0
+				timeUntilUnpause = PauseUntilCancelled
+				menuStatus.SetTitle(fmt.Sprintf("Paused: until cancelled"))
 			case <-menuQuit.ClickedCh:
 				systray.Quit()
 				return
