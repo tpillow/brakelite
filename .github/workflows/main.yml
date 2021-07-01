@@ -8,6 +8,10 @@ on:
 jobs:
     create-release-binaries:
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                goos: ['linux', 'windows']
+                goarch: ['amd64', 'amd64']
         steps:
             -
                 name: Run Apt-Get Deps
@@ -23,11 +27,11 @@ jobs:
                 with:
                     go-version: 1.16
             -
-                name: Create Linux/AMD64 Binary
-                run: env GOOS=linux GOARCH=amd64 go build -o build/linux/amd64/brakelite
+                name: Create ${{ matrix.goos }} / ${{ matrix.goarch }} Binary
+                run: env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite && chmod +x build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite
             -
-                name: Archive Artifacts
+                name: Upload Artifact brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
                 uses: actions/upload-artifact@v2
                 with:
-                    name: brakelite-linux-amd64
-                    path: build/linux/amd64/brakelite
+                    name: brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
+                    path: build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite
