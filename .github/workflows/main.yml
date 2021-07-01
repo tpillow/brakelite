@@ -11,7 +11,7 @@ jobs:
         strategy:
             matrix:
                 goos: ['linux', 'windows']
-                goarch: ['amd64']
+                goarch: ['amd64', '386']
         steps:
             -
                 name: Run Apt-Get Deps
@@ -27,11 +27,19 @@ jobs:
                 with:
                     go-version: 1.16
             -
-                name: Create ${{ matrix.goos }} / ${{ matrix.goarch }} Binary
-                run: env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite && chmod +x build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite
+                name: Create exec_path (linux)
+                if: ${{ matrix.goos }} == 'linux'
+                run: echo 'exec_path=build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite' >> "$GITHUB_ENV"
+            -
+                name: Create exec_path (windows)
+                if: ${{ matrix.goos }} == 'windows'
+                run: echo 'exec_path=build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite.exe' >> "$GITHUB_ENV"
+            -
+                name: Create ${{ matrix.goos }}-${{ matrix.goarch }} Binary
+                run: env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ${{ env.exec_path }} && chmod +x ${{ env.exec_path }}
             -
                 name: Upload Artifact brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
                 uses: actions/upload-artifact@v2
                 with:
                     name: brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
-                    path: build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite
+                    path: ${{ env.exec_path }}
