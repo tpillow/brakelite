@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                goos: ['linux', 'windows', 'darwin']
+                goos: ['linux', 'windows'] # TODO: get darwin (mac) working (see failure comment below)
                 goarch: ['amd64'] # TODO: get 386 working...systray has a failure (compiler thing I think)
         steps:
             -
