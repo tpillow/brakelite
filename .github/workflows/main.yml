@@ -10,8 +10,8 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                goos: ['linux', 'windows']
-                goarch: ['amd64', '386']
+                goos: ['linux', 'windows', 'darwin']
+                goarch: ['amd64'] # TODO: get 386 working...systray has a failure (compiler thing I think)
         steps:
             -
                 name: Run Apt-Get Deps
