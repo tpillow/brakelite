@@ -11,7 +11,7 @@ jobs:
         strategy:
             matrix:
                 goos: ['linux', 'windows']
-                goarch: ['amd64', 'amd64']
+                goarch: ['amd64']
         steps:
             -
                 name: Run Apt-Get Deps
