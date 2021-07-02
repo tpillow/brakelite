@@ -1,0 +1,45 @@
+name: BrakeliteRelease
+
+on:
+    release:
+        types: [created]
+    workflow_dispatch:
+
+jobs:
+    create-release-binaries:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                goos: ['linux', 'windows'] # TODO: get darwin (mac) working (see failure comment below)
+                goarch: ['amd64'] # TODO: get 386 working...systray has a failure (compiler thing I think)
+        steps:
+            -
+                name: Run Apt-Get Deps
+                run: sudo apt-get install gcc libgtk-3-dev libappindicator3-dev
+            -
+                name: Checkout
+                uses: actions/checkout@v2
+                with:
+                    fetch-depth: 0
+            -
+                name: Set up Go
+                uses: actions/setup-go@v2
+                with:
+                    go-version: 1.16
+            -
+                name: Create exec_path (linux)
+                if: ${{ matrix.goos }} == 'linux'
+                run: echo 'exec_path=build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite' >> "$GITHUB_ENV"
+            -
+                name: Create exec_path (windows)
+                if: ${{ matrix.goos }} == 'windows'
+                run: echo 'exec_path=build/${{ matrix.goos }}/${{ matrix.goarch }}/brakelite.exe' >> "$GITHUB_ENV"
+            -
+                name: Create ${{ matrix.goos }}-${{ matrix.goarch }} Binary
+                run: env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ${{ env.exec_path }} && chmod +x ${{ env.exec_path }}
+            -
+                name: Upload Artifact brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
+                uses: actions/upload-artifact@v2
+                with:
+                    name: brakelite-${{ matrix.goos }}-${{ matrix.goarch }}
+                    path: ${{ env.exec_path }}
